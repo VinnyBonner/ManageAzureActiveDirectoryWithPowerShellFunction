@@ -18,10 +18,12 @@ $Script = {
         $ADCredential
     )
     Import-Module AzureAD
+    # Setting TLS1.2 version
+    [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12    
+    
     Connect-AzureAD -Credential $ADCredential | Write-Verbose
 
-    # Serialize data to Json so it can be more easily used somewhere else in the script
-    Get-AzureADTenantDetail | ConvertTo-Json
+    Get-AzureADUser -All $true | select userPrincipalName | where userPrincipalName -ne $null | ConvertTo-Json
 }
 
 # Run using PowerShell.exe instead of using PowerShell 6
@@ -29,6 +31,12 @@ $ScriptResult = ConvertFrom-Json (&$env:64bitPowerShellPath -WindowStyle Hidden 
                                         -Command $Script -Args $ADCredential)
 # Write out result to console
 $ScriptResult
+
+$filePath = '<PathToCsv>/<FileName>.csv'
+$url = '<BlobSasUrl>'
+Export-Csv $filePath -NoTypeInformation
+azcopy copy $filePath $url
+
 
 # Return results to caller
 Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
